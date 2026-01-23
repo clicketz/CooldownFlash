@@ -1,0 +1,5 @@
+ignore:
+  - .github
+  - .vscode
+  - .gitignore
+  - README.md

@@ -1,0 +1,17 @@
+## Interface: 120000
+## Title: |cfffffd8fCooldownFlash|r
+## Notes: Flashes an icon in the center of the screen if a pressed ability is on cooldown.
+## Author: clicket
+## Version: @project-version@
+## X-Website: https://github.com/clicketz/CooldownFlash
+## X-Curse-Project-ID: 1442231
+## IconTexture: Interface\Icons\spell_nature_timestop
+
+## SavedVariables: CooldownFlashDB
+
+## AddonCompartmentFunc: CooldownFlash_OpenOptions
+## AddonCompartmentFuncOnEnter: CooldownFlash_OnCompartmentEnter
+## AddonCompartmentFuncOnLeave: CooldownFlash_OnCompartmentLeave
+
+core.lua
+options.lua
