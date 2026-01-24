@@ -92,15 +92,6 @@ function ns.TriggerFlash(spellID)
     local cdInfo = GetSpellCooldown(spellID)
     if not cdInfo or cdInfo.isOnGCD then return end
 
-    -- Only check this if the spell actually has max charges > 0
-    local chargeInfo = GetSpellCharges(spellID)
-    if chargeInfo and chargeInfo.maxCharges and chargeInfo.maxCharges > 0 then
-        local globalGCD = GetSpellCooldown(GLOBAL_GCD_SPELL)
-        if globalGCD and globalGCD.isOnGCD then
-            return
-        end
-    end
-
     local spellInfo = GetSpellInfo(spellID)
     if not spellInfo then return end
 
