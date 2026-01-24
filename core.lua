@@ -92,6 +92,21 @@ function ns.TriggerFlash(spellID)
     local cdInfo = GetSpellCooldown(spellID)
     if not cdInfo or cdInfo.isOnGCD then return end
 
+    -- NOTE: SpellCharges check may be unnecessary
+    -- Skyriding/Charge Logic:
+    -- If the spell returns ANY charge info, it is a charge-based spell.
+    -- We cannot check 'maxCharges > 0' because maxCharges is a Secret value.
+    -- We rely on the existence of the table 'chargeInfo' to identify charge spells.
+    local chargeInfo = GetSpellCharges(spellID)
+    if chargeInfo then
+        -- If we are on the Global GCD, assume this error is a false positive
+        -- caused by spamming a charge spell (like Skyward Ascent) during GCD.
+        local globalGCD = GetSpellCooldown(GLOBAL_GCD_SPELL)
+        if globalGCD and globalGCD.isOnGCD then
+            return
+        end
+    end
+
     local spellInfo = GetSpellInfo(spellID)
     if not spellInfo then return end
 
@@ -103,7 +118,7 @@ function ns.TriggerFlash(spellID)
     ns.frame:Show()
     ns.frame:SetAlpha(1)
 
-    -- Restart animation without checking IsPlaying
+    -- Restart animation without checking IsPlaying for better performance
     ns.frame.ag:Stop()
     ns.frame.ag:Play()
 end
