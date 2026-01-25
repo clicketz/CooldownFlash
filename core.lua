@@ -12,19 +12,28 @@ local VALID_ERRORS = {
     [ERR_SPELL_COOLDOWN]   = true,
 }
 local TIME_THRESHOLD = 0.2
+local SUCCESS_GRACE_PERIOD = 1.0 -- Seconds to ignore errors after a successful cast
 
 -- State
 local lastFailedSpellID = nil
 local lastFailedTime = 0
+local lastSuccessTime = {} -- [spellID] = timestamp
 
 -- ----------------------------------------------------------------------------
 -- Core Visual Logic
 -- ----------------------------------------------------------------------------
 
 -- Shared function to display the frame (used by Trigger and Test)
-local function DisplayFlash(texture, startTime, duration, modRate)
+local function DisplayFlash(spellID, texture, startTime, duration, modRate)
     if not ns.frame then return end
 
+    -- If we are currently flashing THIS spell, let it play.
+    -- This prevents "stuttering" animations when spamming a key that is on CD.
+    if ns.frame:IsShown() and ns.frame.currentSpellID == spellID and ns.frame.ag:IsPlaying() then
+        return
+    end
+
+    ns.frame.currentSpellID = spellID
     ns.frame.icon:SetTexture(texture)
     -- Use SetCooldown directly to handle Secret values safely
     ns.frame.cooldown:SetCooldown(startTime, duration, modRate)
@@ -75,11 +84,17 @@ function ns.ApplySettings()
 end
 
 function ns.TestFlash()
-    DisplayFlash(134400, GetTime(), 10, 1) -- 134400 is "Interface/Icons/QuestionMark"
+    DisplayFlash(0, 134400, GetTime(), 10, 1) -- 0 ID for test, 134400 is "Interface/Icons/QuestionMark"
 end
 
 function ns.TriggerFlash(spellID)
     if CooldownFlashDB.ignoredSpells and CooldownFlashDB.ignoredSpells[spellID] then return end
+
+    -- If we successfully cast this spell < 1s ago, this error is likely false (spam/lag).
+    local lastSuccess = lastSuccessTime[spellID]
+    if lastSuccess and (GetTime() - lastSuccess) < SUCCESS_GRACE_PERIOD then
+        return
+    end
 
     local cdInfo = GetSpellCooldown(spellID)
     if not cdInfo or cdInfo.isOnGCD then return end
@@ -87,19 +102,27 @@ function ns.TriggerFlash(spellID)
     local spellInfo = GetSpellInfo(spellID)
     if not spellInfo then return end
 
-    DisplayFlash(spellInfo.iconID, cdInfo.startTime, cdInfo.duration, cdInfo.modRate)
+    DisplayFlash(spellID, spellInfo.iconID, cdInfo.startTime, cdInfo.duration, cdInfo.modRate)
 end
 
 -- ----------------------------------------------------------------------------
 -- Event Handling
 -- ----------------------------------------------------------------------------
 local function OnGameplayEvent(self, event, ...)
-    if event == "UNIT_SPELLCAST_FAILED" then
+    if event == "UNIT_SPELLCAST_SUCCEEDED" then
+        local unit, _, spellID = ...
+        if unit == "player" then
+            -- Store the time we successfully cast this spell
+            lastSuccessTime[spellID] = GetTime()
+        end
+
+    elseif event == "UNIT_SPELLCAST_FAILED" then
         local unit, _, spellID = ...
         if unit == "player" then
             lastFailedSpellID = spellID
             lastFailedTime = GetTime()
         end
+
     elseif event == "UI_ERROR_MESSAGE" then
         local _, message = ...
         if VALID_ERRORS[message] then
@@ -145,6 +168,7 @@ local function OnLoad(self, event, name)
     local eventFrame = CreateFrame("Frame")
     eventFrame:RegisterEvent("UNIT_SPELLCAST_FAILED")
     eventFrame:RegisterEvent("UI_ERROR_MESSAGE")
+    eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
     eventFrame:SetScript("OnEvent", OnGameplayEvent)
 
     self:UnregisterEvent("ADDON_LOADED")
