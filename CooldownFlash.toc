@@ -13,5 +13,7 @@
 ## AddonCompartmentFuncOnEnter: CooldownFlash_OnCompartmentEnter
 ## AddonCompartmentFuncOnLeave: CooldownFlash_OnCompartmentLeave
 
+config.lua
+libs.lua
 core.lua
 options.lua

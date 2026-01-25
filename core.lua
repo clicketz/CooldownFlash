@@ -1,40 +1,42 @@
 local addonName, ns = ...
 
--- ----------------------------------------------------------------------------
--- Upvalues
--- ----------------------------------------------------------------------------
+-- Performance Upvalues
 local GetTime = GetTime
 local C_Spell = C_Spell
 local GetSpellCooldown = C_Spell.GetSpellCooldown
-local GetSpellCharges = C_Spell.GetSpellCharges
 local GetSpellInfo = C_Spell.GetSpellInfo
-local pairs = pairs
 
--- ----------------------------------------------------------------------------
--- Configuration
--- ----------------------------------------------------------------------------
-ns.Defaults = {
-    iconSize = 40,
-    fadeDuration = 1.5,
-    fadeDelay = 1,
-    posX = 0,
-    posY = 150,
-}
-
+-- Constants
 local VALID_ERRORS = {
     [ERR_ABILITY_COOLDOWN] = true,
     [ERR_SPELL_COOLDOWN]   = true,
 }
+local TIME_THRESHOLD = 0.2
 
 -- State
 local lastFailedSpellID = nil
 local lastFailedTime = 0
-local TIME_THRESHOLD = 0.2
-local GLOBAL_GCD_SPELL = 61304
 
 -- ----------------------------------------------------------------------------
--- Visuals
+-- Core Visual Logic
 -- ----------------------------------------------------------------------------
+
+-- Shared function to display the frame (used by Trigger and Test)
+local function DisplayFlash(texture, startTime, duration, modRate)
+    if not ns.frame then return end
+
+    ns.frame.icon:SetTexture(texture)
+    -- Use SetCooldown directly to handle Secret values safely
+    ns.frame.cooldown:SetCooldown(startTime, duration, modRate)
+
+    ns.frame:Show()
+    ns.frame:SetAlpha(1)
+
+    -- Restart animation
+    ns.frame.ag:Stop()
+    ns.frame.ag:Play()
+end
+
 function ns.CreateFlashFrame()
     local f = CreateFrame("Frame", "CooldownFlashFrame", UIParent)
     f:SetPoint("CENTER")
@@ -65,7 +67,6 @@ function ns.ApplySettings()
 
     local size = CooldownFlashDB.iconSize
     ns.frame:SetSize(size, size)
-
     ns.frame:ClearAllPoints()
     ns.frame:SetPoint("CENTER", UIParent, "CENTER", CooldownFlashDB.posX, CooldownFlashDB.posY)
 
@@ -74,56 +75,25 @@ function ns.ApplySettings()
 end
 
 function ns.TestFlash()
-    if not ns.frame then return end
-
-    ns.frame.icon:SetTexture(134400) -- Question Mark
-    ns.frame.cooldown:SetCooldown(GetTime(), 10, 1)
-
-    ns.frame:Show()
-    ns.frame:SetAlpha(1)
-    if ns.frame.ag:IsPlaying() then ns.frame.ag:Stop() end
-    ns.frame.ag:Play()
+    DisplayFlash(134400, GetTime(), 10, 1) -- 134400 is "Interface/Icons/QuestionMark"
 end
 
--- ----------------------------------------------------------------------------
--- Logic
--- ----------------------------------------------------------------------------
 function ns.TriggerFlash(spellID)
+    if CooldownFlashDB.ignoredSpells and CooldownFlashDB.ignoredSpells[spellID] then return end
+
     local cdInfo = GetSpellCooldown(spellID)
     if not cdInfo or cdInfo.isOnGCD then return end
-
-    -- NOTE: SpellCharges check may be unnecessary
-    -- Skyriding/Charge Logic:
-    -- If the spell returns ANY charge info, it is a charge-based spell.
-    -- We cannot check 'maxCharges > 0' because maxCharges is a Secret value.
-    -- We rely on the existence of the table 'chargeInfo' to identify charge spells.
-    local chargeInfo = GetSpellCharges(spellID)
-    if chargeInfo then
-        -- If we are on the Global GCD, assume this error is a false positive
-        -- caused by spamming a charge spell (like Skyward Ascent) during GCD.
-        local globalGCD = GetSpellCooldown(GLOBAL_GCD_SPELL)
-        if globalGCD and globalGCD.isOnGCD then
-            return
-        end
-    end
 
     local spellInfo = GetSpellInfo(spellID)
     if not spellInfo then return end
 
-    ns.frame.icon:SetTexture(spellInfo.iconID)
-
-    -- Passing secret values directly for C to handle
-    ns.frame.cooldown:SetCooldown(cdInfo.startTime, cdInfo.duration, cdInfo.modRate)
-
-    ns.frame:Show()
-    ns.frame:SetAlpha(1)
-
-    -- Restart animation without checking IsPlaying for better performance
-    ns.frame.ag:Stop()
-    ns.frame.ag:Play()
+    DisplayFlash(spellInfo.iconID, cdInfo.startTime, cdInfo.duration, cdInfo.modRate)
 end
 
-function ns.OnGameplayEvent(self, event, ...)
+-- ----------------------------------------------------------------------------
+-- Event Handling
+-- ----------------------------------------------------------------------------
+local function OnGameplayEvent(self, event, ...)
     if event == "UNIT_SPELLCAST_FAILED" then
         local unit, _, spellID = ...
         if unit == "player" then
@@ -132,7 +102,6 @@ function ns.OnGameplayEvent(self, event, ...)
         end
     elseif event == "UI_ERROR_MESSAGE" then
         local _, message = ...
-
         if VALID_ERRORS[message] then
             if (GetTime() - lastFailedTime) < TIME_THRESHOLD then
                 if lastFailedSpellID then
@@ -141,13 +110,6 @@ function ns.OnGameplayEvent(self, event, ...)
             end
         end
     end
-end
-
-function ns.SetupGameplayEvents()
-    local eventFrame = CreateFrame("Frame")
-    eventFrame:RegisterEvent("UNIT_SPELLCAST_FAILED")
-    eventFrame:RegisterEvent("UI_ERROR_MESSAGE")
-    eventFrame:SetScript("OnEvent", ns.OnGameplayEvent)
 end
 
 -- ----------------------------------------------------------------------------
@@ -173,26 +135,21 @@ end
 -- ----------------------------------------------------------------------------
 -- Init
 -- ----------------------------------------------------------------------------
-function ns.InitDB()
-    CooldownFlashDB = CooldownFlashDB or {}
-    for k, v in pairs(ns.Defaults) do
-        if CooldownFlashDB[k] == nil then
-            CooldownFlashDB[k] = v
-        end
-    end
-end
-
-function ns.OnLoad(self, event, name)
+local function OnLoad(self, event, name)
     if name ~= addonName then return end
 
-    ns.InitDB()
+    ns.Config.InitDB()
     ns.CreateFlashFrame()
     ns.SetupOptions()
-    ns.SetupGameplayEvents()
+
+    local eventFrame = CreateFrame("Frame")
+    eventFrame:RegisterEvent("UNIT_SPELLCAST_FAILED")
+    eventFrame:RegisterEvent("UI_ERROR_MESSAGE")
+    eventFrame:SetScript("OnEvent", OnGameplayEvent)
 
     self:UnregisterEvent("ADDON_LOADED")
 end
 
 local loader = CreateFrame("Frame")
 loader:RegisterEvent("ADDON_LOADED")
-loader:SetScript("OnEvent", ns.OnLoad)
+loader:SetScript("OnEvent", OnLoad)
