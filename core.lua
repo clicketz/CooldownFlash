@@ -110,19 +110,13 @@ end
 -- ----------------------------------------------------------------------------
 local function OnGameplayEvent(self, event, ...)
     if event == "UNIT_SPELLCAST_SUCCEEDED" then
-        local unit, _, spellID = ...
-        if unit == "player" then
-            -- Store the time we successfully cast this spell
-            lastSuccessTime[spellID] = GetTime()
-        end
-
+        local _, _, spellID = ...
+        -- Store the time we successfully cast this spell
+        lastSuccessTime[spellID] = GetTime()
     elseif event == "UNIT_SPELLCAST_FAILED" then
-        local unit, _, spellID = ...
-        if unit == "player" then
-            lastFailedSpellID = spellID
-            lastFailedTime = GetTime()
-        end
-
+        local _, _, spellID = ...
+        lastFailedSpellID = spellID
+        lastFailedTime = GetTime()
     elseif event == "UI_ERROR_MESSAGE" then
         local _, message = ...
         if VALID_ERRORS[message] then
@@ -166,9 +160,10 @@ local function OnLoad(self, event, name)
     ns.SetupOptions()
 
     local eventFrame = CreateFrame("Frame")
-    eventFrame:RegisterEvent("UNIT_SPELLCAST_FAILED")
+    eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "player")
+    eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
     eventFrame:RegisterEvent("UI_ERROR_MESSAGE")
-    eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
+
     eventFrame:SetScript("OnEvent", OnGameplayEvent)
 
     self:UnregisterEvent("ADDON_LOADED")
