@@ -34,6 +34,7 @@ local function DisplayFlash(spellID, texture, startTime, duration, modRate)
     end
 
     ns.frame.currentSpellID = spellID
+
     ns.frame.Icon:SetTexture(texture)
     ns.frame.Cooldown:SetCooldown(startTime, duration, modRate)
 
@@ -46,36 +47,52 @@ local function DisplayFlash(spellID, texture, startTime, duration, modRate)
 end
 
 function ns.CreateFlashFrame()
-    local f = CreateFrame("Button", "CooldownFlashFrame", UIParent) -- Changed to Button for better skinning support
+    local f = CreateFrame("Button", "CooldownFlashFrame", UIParent)
     f:SetPoint("CENTER")
     f:Hide()
-    f:SetAlpha(0)
     f:EnableMouse(false) -- Ensure it doesn't intercept clicks
 
-    -- Standardized names (Icon/Cooldown) for Masque auto-detection
     f.Icon = f:CreateTexture(nil, "BACKGROUND")
     f.Icon:SetAllPoints()
 
+    -- Masque attaches the skin's border to this region.
+    f.Normal = f:CreateTexture(nil, "BORDER")
+    f.Normal:SetAllPoints()
+    f.Normal:SetTexture(nil)
+
+    -- pushed texture (unused atm)
+    f.Pushed = f:CreateTexture(nil, "ARTWORK")
+    f.Pushed:SetAllPoints()
+    f.Pushed:SetTexture(nil)
+    f:SetPushedTexture(f.Pushed)
+
+    -- highlight texture (unused atm)
+    f.Highlight = f:CreateTexture(nil, "HIGHLIGHT")
+    f.Highlight:SetAllPoints()
+    f.Highlight:SetTexture(nil)
+    f:SetHighlightTexture(f.Highlight)
+
+    -- cooldown spiral
     f.Cooldown = CreateFrame("Cooldown", "$parentCooldown", f, "CooldownFrameTemplate")
     f.Cooldown:SetAllPoints()
     f.Cooldown:SetDrawEdge(false)
 
+    -- animation
     f.ag = f:CreateAnimationGroup()
     f.alphaAnim = f.ag:CreateAnimation("Alpha")
     f.alphaAnim:SetFromAlpha(1)
     f.alphaAnim:SetToAlpha(0)
     f.alphaAnim:SetSmoothing("OUT")
-
     f.ag:SetScript("OnFinished", function() f:Hide() end)
 
     ns.frame = f
 
-    -- Hook for Masque (logic resides in skin.lua)
+    -- apply settings before skinning for masque
+    ns.ApplySettings()
+
     if ns.Skin and ns.Skin.Register then
         ns.Skin.Register(f)
     end
-
-    ns.ApplySettings()
 end
 
 function ns.ApplySettings()
@@ -88,6 +105,11 @@ function ns.ApplySettings()
 
     ns.frame.alphaAnim:SetDuration(CooldownFlashDB.fadeDuration)
     ns.frame.alphaAnim:SetStartDelay(CooldownFlashDB.fadeDelay)
+
+    -- refresh skin if size changed
+    if ns.Skin and ns.Skin.ReSkin then
+        ns.Skin.ReSkin()
+    end
 end
 
 function ns.TestFlash()

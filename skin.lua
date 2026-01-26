@@ -1,23 +1,36 @@
 local addonName, ns = ...
 
 ns.Skin = {}
+local group = nil
 
 -- ----------------------------------------------------------------------------
 -- Masque Registration
 -- ----------------------------------------------------------------------------
 function ns.Skin.Register(frame)
-    -- Check if Masque is loaded without hard-crashing if LibStub is missing
     local Masque = LibStub and LibStub("Masque", true)
     if not Masque then return end
 
-    -- Create a group for the addon
-    local group = Masque:Group(addonName)
+    group = Masque:Group(addonName)
 
-    -- Register the frame.
-    -- Masque expects the frame to have regions named .Icon and .Cooldown
-    -- (We standardized these names in core.lua to avoid passing a mapping table here)
-    group:AddButton(frame)
+    -- Register all standard button regions so the skin can fully wrap the frame
+    local buttonData = {
+        Icon = frame.Icon,
+        Cooldown = frame.Cooldown,
+        Normal = frame.Normal,
+        Pushed = frame.Pushed,
+        Highlight = frame.Highlight,
+    }
 
-    -- Apply the skin immediately
+    group:AddButton(frame, buttonData)
+
     group:ReSkin()
+end
+
+-- ----------------------------------------------------------------------------
+-- Trigger a re-skin (useful when resizing the frame)
+-- ----------------------------------------------------------------------------
+function ns.Skin.ReSkin()
+    if group then
+        group:ReSkin()
+    end
 end
