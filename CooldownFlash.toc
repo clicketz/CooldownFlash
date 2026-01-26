@@ -9,11 +9,14 @@
 
 ## SavedVariables: CooldownFlashDB
 
+## OptionalDeps: Masque
+
 ## AddonCompartmentFunc: CooldownFlash_OpenOptions
 ## AddonCompartmentFuncOnEnter: CooldownFlash_OnCompartmentEnter
 ## AddonCompartmentFuncOnLeave: CooldownFlash_OnCompartmentLeave
 
 config.lua
 libs.lua
+skin.lua
 core.lua
 options.lua

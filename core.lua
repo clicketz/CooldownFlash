@@ -34,9 +34,8 @@ local function DisplayFlash(spellID, texture, startTime, duration, modRate)
     end
 
     ns.frame.currentSpellID = spellID
-    ns.frame.icon:SetTexture(texture)
-    -- Use SetCooldown directly to handle Secret values safely
-    ns.frame.cooldown:SetCooldown(startTime, duration, modRate)
+    ns.frame.Icon:SetTexture(texture)
+    ns.frame.Cooldown:SetCooldown(startTime, duration, modRate)
 
     ns.frame:Show()
     ns.frame:SetAlpha(1)
@@ -47,17 +46,19 @@ local function DisplayFlash(spellID, texture, startTime, duration, modRate)
 end
 
 function ns.CreateFlashFrame()
-    local f = CreateFrame("Frame", "CooldownFlashFrame", UIParent)
+    local f = CreateFrame("Button", "CooldownFlashFrame", UIParent) -- Changed to Button for better skinning support
     f:SetPoint("CENTER")
     f:Hide()
     f:SetAlpha(0)
+    f:EnableMouse(false) -- Ensure it doesn't intercept clicks
 
-    f.icon = f:CreateTexture(nil, "BACKGROUND")
-    f.icon:SetAllPoints()
+    -- Standardized names (Icon/Cooldown) for Masque auto-detection
+    f.Icon = f:CreateTexture(nil, "BACKGROUND")
+    f.Icon:SetAllPoints()
 
-    f.cooldown = CreateFrame("Cooldown", "$parentCooldown", f, "CooldownFrameTemplate")
-    f.cooldown:SetAllPoints()
-    f.cooldown:SetDrawEdge(false)
+    f.Cooldown = CreateFrame("Cooldown", "$parentCooldown", f, "CooldownFrameTemplate")
+    f.Cooldown:SetAllPoints()
+    f.Cooldown:SetDrawEdge(false)
 
     f.ag = f:CreateAnimationGroup()
     f.alphaAnim = f.ag:CreateAnimation("Alpha")
@@ -68,6 +69,12 @@ function ns.CreateFlashFrame()
     f.ag:SetScript("OnFinished", function() f:Hide() end)
 
     ns.frame = f
+
+    -- Hook for Masque (logic resides in skin.lua)
+    if ns.Skin and ns.Skin.Register then
+        ns.Skin.Register(f)
+    end
+
     ns.ApplySettings()
 end
 
