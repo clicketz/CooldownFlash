@@ -179,6 +179,27 @@ function CooldownFlash_OnCompartmentLeave()
 end
 
 -- ----------------------------------------------------------------------------
+-- Slash Handler
+-- ---------------------------------------------------------------------------
+function ns.SlashCommandHandler(msg)
+    local command = msg:lower()
+
+    if command == "test" then
+        ns.TestFlash()
+    elseif Settings and Settings.OpenToCategory then
+        Settings.OpenToCategory(ns.CategoryID)
+    else
+        InterfaceOptionsFrame_OpenToCategory(addonName)
+    end
+end
+
+function ns.SetupSlashHandler()
+    SLASH_COOLDOWNFLASH1 = "/cdf"
+    SLASH_COOLDOWNFLASH2 = "/cooldownflash"
+    SlashCmdList["COOLDOWNFLASH"] = function(msg) ns.SlashCommandHandler(msg) end
+end
+
+-- ----------------------------------------------------------------------------
 -- Init
 -- ----------------------------------------------------------------------------
 local function OnLoad(self, event, name)
@@ -187,6 +208,7 @@ local function OnLoad(self, event, name)
     ns.Config.InitDB()
     ns.CreateFlashFrame()
     ns.SetupOptions()
+    ns.SetupSlashHandler()
 
     local eventFrame = CreateFrame("Frame")
     eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "player")
