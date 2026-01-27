@@ -167,9 +167,9 @@ function CooldownFlash_OpenOptions()
     end
 end
 
-function CooldownFlash_OnCompartmentEnter(addonName, button)
+function CooldownFlash_OnCompartmentEnter(_, button)
     GameTooltip:SetOwner(button, "ANCHOR_LEFT")
-    GameTooltip:SetText("CooldownFlash")
+    GameTooltip:SetText(addonName)
     GameTooltip:AddLine("Click to open settings.", 1, 1, 1)
     GameTooltip:Show()
 end
