@@ -45,6 +45,31 @@ function ns.SetupOptions()
     blacklistPanel:SetPoint("TOPRIGHT", -20, -20)
     blacklistPanel:SetPoint("BOTTOMRIGHT", -20, 20)
 
+    -- Slash Command Help Panel
+    local helpPanel = CreateFrame("Frame", nil, panel)
+    helpPanel:SetSize(100, 150)
+    helpPanel:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 20, 20)
+
+    local helpTitle = helpPanel:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    helpTitle:SetPoint("TOPLEFT", 0, 0)
+    helpTitle:SetText("Slash Commands")
+
+    local function AddCommand(cmd, desc, prev)
+        local c = helpPanel:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+        c:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", 0, -12)
+        c:SetText(cmd)
+        local d = helpPanel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+        d:SetPoint("TOPLEFT", c, "BOTTOMLEFT", 0, -2)
+        d:SetText(desc)
+        d:SetTextColor(0.6, 0.6, 0.6, 1)
+        return d
+    end
+
+    local lastHelp = helpTitle
+    lastHelp = AddCommand("/cdf", "Open this options menu", lastHelp)
+    lastHelp = AddCommand("/cooldownflash", "Alias for /cdf", lastHelp)
+    lastHelp = AddCommand("/cdf test", "Trigger a test flash", lastHelp)
+
     -- Register Category
     local category = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
     Settings.RegisterAddOnCategory(category)
