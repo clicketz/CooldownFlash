@@ -55,6 +55,10 @@ function ns.CreateFlashFrame()
     f.Icon = f:CreateTexture(nil, "BACKGROUND")
     f.Icon:SetAllPoints()
 
+
+    -- Create our own textures so we don't have to deal
+    -- with fixing actionbuttontemplate regions
+
     -- Masque attaches the skin's border to this region.
     f.Normal = f:CreateTexture(nil, "BORDER")
     f.Normal:SetAllPoints()
