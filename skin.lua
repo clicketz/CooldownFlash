@@ -21,7 +21,7 @@ function ns.Skin.Register(frame)
         Highlight = frame.Highlight,
     }
 
-    group:AddButton(frame, buttonData)
+    group:AddButton(frame, buttonData, "Item")
 
     group:ReSkin()
 end
