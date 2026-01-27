@@ -16,7 +16,8 @@ function ns.Libs.CreateNumberInput(parent, label, key, updateFunc)
         self:SetCursorPosition(0)
     end)
 
-    editbox:SetScript("OnEnterPressed", function(self)
+    -- Shared logic to save the value
+    local function SaveValue(self)
         local val = tonumber(self:GetText())
         if val then
             CooldownFlashDB[key] = val
@@ -25,7 +26,10 @@ function ns.Libs.CreateNumberInput(parent, label, key, updateFunc)
         else
             self:SetText(tostring(CooldownFlashDB[key]))
         end
-    end)
+    end
+
+    editbox:SetScript("OnEnterPressed", SaveValue)
+    editbox:SetScript("OnEditFocusLost", SaveValue)
 
     editbox:SetScript("OnEscapePressed", function(self)
         self:SetText(tostring(CooldownFlashDB[key]))
