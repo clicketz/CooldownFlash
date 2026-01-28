@@ -12,7 +12,7 @@ function ns.SetupOptions()
     subText:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
     subText:SetText("Press Enter to save changes.")
 
-    -- Configuration Inputs (Left Side)
+    -- Configuration Inputs
     local sizeInput = ns.Libs.CreateNumberInput(panel, "Icon Size (px)", "iconSize", function(val)
         if ns.frame then ns.frame:SetSize(val, val) end
     end)
@@ -40,7 +40,7 @@ function ns.SetupOptions()
     testBtn:SetPoint("TOPLEFT", delayInput, "BOTTOMLEFT", 0, -30)
     testBtn:SetScript("OnClick", function() ns.TestFlash() end)
 
-    -- Blacklist Panel (Right Side)
+    -- Blacklist Panel
     local blacklistPanel = ns.Libs.CreateBlacklistPanel(panel)
     blacklistPanel:SetPoint("TOPRIGHT", -20, -20)
     blacklistPanel:SetPoint("BOTTOMRIGHT", -20, 20)
@@ -72,6 +72,13 @@ function ns.SetupOptions()
 
     -- Register Category
     local category = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
+
+    category.OnRefresh = function()
+        ns.Libs.RefreshOptions()
+    end
+
     Settings.RegisterAddOnCategory(category)
     ns.CategoryID = category:GetID()
+
+    ns.Libs.RefreshOptions()
 end

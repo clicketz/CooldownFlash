@@ -1,7 +1,18 @@
 local _, ns = ...
 ns.Libs = {}
 
--- Creates a standard labeled numeric input box
+-- Registry to track inputs so the Options Panel can refresh them on demand
+local inputRegistry = {}
+
+-- Called by options.lua via category.OnRefresh
+function ns.Libs.RefreshOptions()
+    for _, element in ipairs(inputRegistry) do
+        if element.UpdateValue then
+            element:UpdateValue()
+        end
+    end
+end
+
 function ns.Libs.CreateNumberInput(parent, label, key, updateFunc)
     local editbox = CreateFrame("EditBox", nil, parent, "InputBoxTemplate")
     editbox:SetSize(60, 20)
@@ -11,9 +22,18 @@ function ns.Libs.CreateNumberInput(parent, label, key, updateFunc)
     labelText:SetPoint("LEFT", editbox, "RIGHT", 10, 0)
     labelText:SetText(label)
 
-    editbox:SetScript("OnShow", function(self)
-        self:SetText(tostring(CooldownFlashDB[key] or ns.Config.Defaults[key]))
+    function editbox:UpdateValue()
+        local val = CooldownFlashDB[key]
+        if val == nil then val = ns.Config.Defaults[key] end
+        if val == nil then val = 0 end
+
+        self:SetText(tostring(val))
         self:SetCursorPosition(0)
+    end
+
+    -- Update on show (covers standard menu navigation)
+    editbox:SetScript("OnShow", function(self)
+        self:UpdateValue()
     end)
 
     -- Shared logic to save the value
@@ -24,18 +44,18 @@ function ns.Libs.CreateNumberInput(parent, label, key, updateFunc)
             if updateFunc then updateFunc(val) end
             self:ClearFocus()
         else
-            self:SetText(tostring(CooldownFlashDB[key]))
+            self:UpdateValue()
         end
     end
 
     editbox:SetScript("OnEnterPressed", SaveValue)
     editbox:SetScript("OnEditFocusLost", SaveValue)
-
     editbox:SetScript("OnEscapePressed", function(self)
-        self:SetText(tostring(CooldownFlashDB[key]))
+        self:UpdateValue()
         self:ClearFocus()
     end)
 
+    table.insert(inputRegistry, editbox)
     return editbox
 end
 
@@ -46,7 +66,9 @@ function ns.Libs.CreateBlacklistPanel(parent)
     container:SetBackdrop({
         bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
         edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-        tile = true, tileSize = 32, edgeSize = 32,
+        tile = true,
+        tileSize = 32,
+        edgeSize = 32,
         insets = { left = 8, right = 8, top = 8, bottom = 8 }
     })
 
@@ -79,14 +101,40 @@ function ns.Libs.CreateBlacklistPanel(parent)
     content:SetSize(240, 1)
     scrollFrame:SetScrollChild(content)
 
+    local rowCache = {}
+
+    local function GetRow(index)
+        if not rowCache[index] then
+            local row = CreateFrame("Frame", nil, content, "BackdropTemplate")
+            row:SetSize(240, 24)
+
+            row.icon = row:CreateTexture(nil, "ARTWORK")
+            row.icon:SetSize(20, 20)
+            row.icon:SetPoint("LEFT", 2, 0)
+
+            row.delBtn = CreateFrame("Button", nil, row, "UIPanelCloseButton")
+            row.delBtn:SetSize(24, 24)
+            row.delBtn:SetPoint("RIGHT", 0, 0)
+
+            row.text = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+            row.text:SetPoint("LEFT", row.icon, "RIGHT", 5, 0)
+            row.text:SetPoint("RIGHT", row.delBtn, "LEFT", -5, 0)
+            row.text:SetJustifyH("LEFT")
+
+            rowCache[index] = row
+        end
+        return rowCache[index]
+    end
+
     local function RefreshList()
-        for _, child in ipairs({ content:GetChildren() }) do
-            child:Hide()
-            child:SetParent(nil)
+        for _, row in ipairs(rowCache) do
+            row:Hide()
         end
 
         local spells = {}
-        for id in pairs(CooldownFlashDB.ignoredSpells or {}) do
+        local dbSpells = CooldownFlashDB.ignoredSpells or {}
+
+        for id in pairs(dbSpells) do
             local info = C_Spell.GetSpellInfo(id)
             table.insert(spells, {
                 id = id,
@@ -96,31 +144,28 @@ function ns.Libs.CreateBlacklistPanel(parent)
         end
         table.sort(spells, function(a, b) return a.name < b.name end)
 
-        local lastRow
-        for _, spell in ipairs(spells) do
-            local row = CreateFrame("Frame", nil, content, "BackdropTemplate")
-            row:SetSize(240, 24)
-            row:SetPoint("TOPLEFT", lastRow and lastRow or content, lastRow and "BOTTOMLEFT" or "TOPLEFT", 0, lastRow and -2 or 0)
+        local lastRow = nil
+        for i, spell in ipairs(spells) do
+            local row = GetRow(i)
 
-            local icon = row:CreateTexture(nil, "ARTWORK")
-            icon:SetSize(20, 20)
-            icon:SetPoint("LEFT", 2, 0)
-            icon:SetTexture(spell.icon)
+            row.icon:SetTexture(spell.icon)
+            row.text:SetText(spell.name .. " |cff888888(" .. spell.id .. ")|r")
 
-            local delBtn = CreateFrame("Button", nil, row, "UIPanelCloseButton")
-            delBtn:SetSize(24, 24)
-            delBtn:SetPoint("RIGHT", 0, 0)
-            delBtn:SetScript("OnClick", function()
-                CooldownFlashDB.ignoredSpells[spell.id] = nil
-                RefreshList()
+            row.delBtn:SetScript("OnClick", function()
+                if CooldownFlashDB.ignoredSpells then
+                    CooldownFlashDB.ignoredSpells[spell.id] = nil
+                    RefreshList()
+                end
             end)
 
-            local text = row:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-            text:SetPoint("LEFT", icon, "RIGHT", 5, 0)
-            text:SetPoint("RIGHT", delBtn, "LEFT", -5, 0)
-            text:SetJustifyH("LEFT")
-            text:SetText(spell.name .. " |cff888888(" .. spell.id .. ")|r")
+            row:ClearAllPoints()
+            if lastRow then
+                row:SetPoint("TOPLEFT", lastRow, "BOTTOMLEFT", 0, -2)
+            else
+                row:SetPoint("TOPLEFT", 0, 0)
+            end
 
+            row:Show()
             lastRow = row
         end
         content:SetHeight(math.max(#spells * 26, 10))
@@ -129,7 +174,7 @@ function ns.Libs.CreateBlacklistPanel(parent)
     local function AddSpell()
         local id = tonumber(addInput:GetText())
         if id and C_Spell.GetSpellInfo(id) then
-            CooldownFlashDB.ignoredSpells = CooldownFlashDB.ignoredSpells or {}
+            if not CooldownFlashDB.ignoredSpells then CooldownFlashDB.ignoredSpells = {} end
             CooldownFlashDB.ignoredSpells[id] = true
             addInput:SetText("")
             addInput:ClearFocus()
@@ -143,6 +188,9 @@ function ns.Libs.CreateBlacklistPanel(parent)
     addButton:SetScript("OnClick", AddSpell)
     addInput:SetScript("OnEnterPressed", AddSpell)
     container:SetScript("OnShow", RefreshList)
+
+    container.UpdateValue = RefreshList
+    table.insert(inputRegistry, container)
 
     return container
 end

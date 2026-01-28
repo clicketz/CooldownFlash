@@ -203,7 +203,6 @@ end
 local function OnLoad(self, event, name)
     if name ~= addonName then return end
 
-    ns.Config.InitDB()
     ns.CreateFlashFrame()
     ns.SetupOptions()
     ns.SetupSlashHandler()
