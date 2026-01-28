@@ -48,7 +48,6 @@ end
 
 function ns.CreateFlashFrame()
     local f = CreateFrame("Button", "CooldownFlashFrame", UIParent)
-    f:SetPoint("CENTER")
     f:Hide()
     f:EnableMouse(false) -- Ensure it doesn't intercept clicks
 
@@ -94,9 +93,7 @@ function ns.CreateFlashFrame()
     -- apply settings before skinning for masque
     ns.ApplySettings()
 
-    if ns.Skin and ns.Skin.Register then
-        ns.Skin.Register(f)
-    end
+    ns.Skin.Register(f)
 end
 
 function ns.ApplySettings()
@@ -110,10 +107,7 @@ function ns.ApplySettings()
     ns.frame.alphaAnim:SetDuration(CooldownFlashDB.fadeDuration)
     ns.frame.alphaAnim:SetStartDelay(CooldownFlashDB.fadeDelay)
 
-    -- refresh skin if size changed
-    if ns.Skin and ns.Skin.ReSkin then
-        ns.Skin.ReSkin()
-    end
+    ns.Skin.ReSkin()
 end
 
 function ns.TestFlash()
