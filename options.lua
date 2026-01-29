@@ -13,9 +13,7 @@ function ns.SetupOptions()
     subText:SetText("Press Enter to save changes.")
 
     -- Configuration Inputs
-    local sizeInput = ns.Libs.CreateNumberInput(panel, "Icon Size (px)", "iconSize", function(val)
-        if ns.frame then ns.frame:SetSize(val, val) end
-    end)
+    local sizeInput = ns.Libs.CreateNumberInput(panel, "Icon Size (px)", "iconSize", function() ns.ApplySettings() end)
     sizeInput:SetPoint("TOPLEFT", subText, "BOTTOMLEFT", 10, -30)
 
     local xInput = ns.Libs.CreateNumberInput(panel, "Position X", "posX", function() ns.ApplySettings() end)
