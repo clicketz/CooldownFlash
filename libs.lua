@@ -39,17 +39,22 @@ function ns.Libs.CreateNumberInput(parent, label, key, updateFunc)
     -- Shared logic to save the value
     local function SaveValue(self)
         local val = tonumber(self:GetText())
-        if val then
+        -- Only update if valid and changed
+        if val and val ~= CooldownFlashDB[key] then
             CooldownFlashDB[key] = val
             if updateFunc then updateFunc(val) end
-            self:ClearFocus()
         else
             self:UpdateValue()
         end
     end
 
-    editbox:SetScript("OnEnterPressed", SaveValue)
+    -- enter just clears focus. Saves happen on focus lost.
+    editbox:SetScript("OnEnterPressed", function(self)
+        self:ClearFocus()
+    end)
+
     editbox:SetScript("OnEditFocusLost", SaveValue)
+
     editbox:SetScript("OnEscapePressed", function(self)
         self:UpdateValue()
         self:ClearFocus()
