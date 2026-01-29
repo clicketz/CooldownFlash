@@ -13,6 +13,7 @@ local VALID_ERRORS = {
 }
 local TIME_THRESHOLD = 0.2
 local SUCCESS_GRACE_PERIOD = 1.0 -- Seconds to ignore errors after a successful cast
+local BASE_SIZE = 36             -- Standard Blizzard ActionButton size
 
 -- State
 local lastFailedSpellID = nil
@@ -99,11 +100,20 @@ end
 function ns.ApplySettings()
     if not ns.frame then return end
 
-    local size = CooldownFlashDB.iconSize
-    ns.frame:SetSize(size, size)
-    ns.frame:ClearAllPoints()
-    ns.frame:SetPoint("CENTER", UIParent, "CENTER", CooldownFlashDB.posX, CooldownFlashDB.posY)
+    -- lock the frame to BASE_SIZE and use scale so subregions scale properly
+    local userSize = CooldownFlashDB.iconSize
+    local scale = userSize / BASE_SIZE
 
+    ns.frame:SetSize(BASE_SIZE, BASE_SIZE)
+    ns.frame:SetScale(scale)
+
+    -- divide coordinates by scale so the position on screen is accurate
+    local x = CooldownFlashDB.posX / scale
+    local y = CooldownFlashDB.posY / scale
+    ns.frame:ClearAllPoints()
+    ns.frame:SetPoint("CENTER", UIParent, "CENTER", x, y)
+
+    -- update animations
     ns.frame.alphaAnim:SetDuration(CooldownFlashDB.fadeDuration)
     ns.frame.alphaAnim:SetStartDelay(CooldownFlashDB.fadeDelay)
 
