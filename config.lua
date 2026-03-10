@@ -9,6 +9,7 @@ ns.Config.Defaults = {
     fadeDelay = 1,
     posX = 0,
     posY = 150,
+    anchor = "CENTER",
     ignoredSpells = {}, -- [spellID] = true
 }
 

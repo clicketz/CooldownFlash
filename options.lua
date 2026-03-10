@@ -32,10 +32,17 @@ function ns.SetupOptions()
     end)
     delayInput:SetPoint("TOPLEFT", fadeInput, "BOTTOMLEFT", 0, -20)
 
+    local anchorOptions = {
+        { name = "Center", value = "CENTER" },
+        { name = "Cursor", value = "Cursor" }
+    }
+    local anchorInput = ns.Libs.CreateDropdown(panel, "Anchor To:", "anchor", anchorOptions, function() ns.ApplySettings() end)
+    anchorInput:SetPoint("TOPLEFT", delayInput, "BOTTOMLEFT", -5, -20)
+
     local testBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     testBtn:SetSize(120, 25)
     testBtn:SetText("Test Flash")
-    testBtn:SetPoint("TOPLEFT", delayInput, "BOTTOMLEFT", 0, -30)
+    testBtn:SetPoint("TOPLEFT", anchorInput, "BOTTOMLEFT", 5, -30)
     testBtn:SetScript("OnClick", function() ns.TestFlash() end)
 
     -- Blacklist Panel

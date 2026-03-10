@@ -5,6 +5,7 @@ local GetTime = GetTime
 local C_Spell = C_Spell
 local GetSpellCooldown = C_Spell.GetSpellCooldown
 local GetSpellInfo = C_Spell.GetSpellInfo
+local GetCursorPosition = GetCursorPosition
 
 -- Constants
 local VALID_ERRORS = {
@@ -20,9 +21,72 @@ local lastFailedSpellID = nil
 local lastFailedTime = 0
 local lastSuccessTime = {} -- [spellID] = timestamp
 
+-- Screen Metrics Cache
+local cachedUIScale = 1
+local cachedScreenW = 0
+local cachedScreenH = 0
+
+local function RefreshScreenMetrics()
+    cachedUIScale = UIParent:GetEffectiveScale()
+    cachedScreenW = UIParent:GetWidth()
+    cachedScreenH = UIParent:GetHeight()
+end
+
 -- ----------------------------------------------------------------------------
 -- Core Visual Logic
 -- ----------------------------------------------------------------------------
+
+-- OnUpdate loop for Cursor Tracking and Boundary Checks
+local function CursorTracker_OnUpdate(self)
+    local cursorX, cursorY = GetCursorPosition()
+
+    -- convert absolute cursor position to UIParent coordinates
+    local uiX = cursorX / cachedUIScale
+    local uiY = cursorY / cachedUIScale
+
+    local frameScale = self:GetScale()
+    local halfSize = (BASE_SIZE * frameScale) / 2
+
+    -- grab user offsets directly (they are already in UIParent space)
+    local offsetX = CooldownFlashDB.posX
+    local offsetY = CooldownFlashDB.posY
+
+    local targetX = uiX + offsetX
+    local targetY = uiY + offsetY
+
+    -- boundary checks (flip the offset if we push off the edge of the screen)
+    local offLeft = (targetX - halfSize) < 0
+    local offRight = (targetX + halfSize) > cachedScreenW
+    local offBottom = (targetY - halfSize) < 0
+    local offTop = (targetY + halfSize) > cachedScreenH
+
+    if offLeft or offRight then
+        offsetX = -offsetX
+        targetX = uiX + offsetX
+    end
+    if offBottom or offTop then
+        offsetY = -offsetY
+        targetY = uiY + offsetY
+    end
+
+    -- final clamp to guarantee it stays entirely visible on screen
+    if targetX - halfSize < 0 then targetX = halfSize end
+    if targetX + halfSize > cachedScreenW then targetX = cachedScreenW - halfSize end
+    if targetY - halfSize < 0 then targetY = halfSize end
+    if targetY + halfSize > cachedScreenH then targetY = cachedScreenH - halfSize end
+
+    -- convert back to the frame's local scaled coordinate space for SetPoint
+    local finalX = targetX / frameScale
+    local finalY = targetY / frameScale
+
+    -- execute a position change if it physically moved
+    if self._lastX ~= finalX or self._lastY ~= finalY then
+        self:ClearAllPoints()
+        self:SetPoint("CENTER", UIParent, "BOTTOMLEFT", finalX, finalY)
+        self._lastX = finalX
+        self._lastY = finalY
+    end
+end
 
 -- Shared function to display the frame (used by Trigger and Test)
 local function DisplayFlash(spellID, texture, startTime, duration, modRate)
@@ -39,6 +103,15 @@ local function DisplayFlash(spellID, texture, startTime, duration, modRate)
     ns.frame.Icon:SetTexture(texture)
     ns.frame.Cooldown:SetCooldown(startTime, duration, modRate)
 
+    -- Hook or unhook the cursor tracker depending on settings
+    if CooldownFlashDB.anchor == "Cursor" then
+        ns.frame:SetScript("OnUpdate", CursorTracker_OnUpdate)
+    else
+        ns.frame:SetScript("OnUpdate", nil)
+        ns.frame._lastX = nil
+        ns.frame._lastY = nil
+    end
+
     ns.frame:Show()
     ns.frame:SetAlpha(1)
 
@@ -54,7 +127,6 @@ function ns.CreateFlashFrame()
 
     f.Icon = f:CreateTexture(nil, "BACKGROUND")
     f.Icon:SetAllPoints()
-
 
     -- Create our own textures so we don't have to deal
     -- with fixing actionbuttontemplate regions
@@ -87,7 +159,12 @@ function ns.CreateFlashFrame()
     f.alphaAnim:SetFromAlpha(1)
     f.alphaAnim:SetToAlpha(0)
     f.alphaAnim:SetSmoothing("OUT")
-    f.ag:SetScript("OnFinished", function() f:Hide() end)
+    f.ag:SetScript("OnFinished", function()
+        f:Hide()
+        f:SetScript("OnUpdate", nil)
+        f._lastX = nil
+        f._lastY = nil
+    end)
 
     ns.frame = f
 
@@ -107,11 +184,13 @@ function ns.ApplySettings()
     ns.frame:SetSize(BASE_SIZE, BASE_SIZE)
     ns.frame:SetScale(scale)
 
-    -- divide coordinates by scale so the position on screen is accurate
-    local x = CooldownFlashDB.posX / scale
-    local y = CooldownFlashDB.posY / scale
-    ns.frame:ClearAllPoints()
-    ns.frame:SetPoint("CENTER", UIParent, "CENTER", x, y)
+    if CooldownFlashDB.anchor ~= "Cursor" then
+        local x = CooldownFlashDB.posX / scale
+        local y = CooldownFlashDB.posY / scale
+        ns.frame:ClearAllPoints()
+        ns.frame:SetPoint("CENTER", UIParent, "CENTER", x, y)
+        ns.frame:SetScript("OnUpdate", nil)
+    end
 
     -- update animations
     ns.frame.alphaAnim:SetDuration(CooldownFlashDB.fadeDuration)
@@ -127,7 +206,7 @@ end
 function ns.TriggerFlash(spellID)
     if CooldownFlashDB.ignoredSpells and CooldownFlashDB.ignoredSpells[spellID] then return end
 
-    -- If we successfully cast this spell < 1s ago, this error is likely false (spam/lag).
+    -- If we successfully cast this spell < 1s ago, this error is likely false (spam/lag)
     local lastSuccess = lastSuccessTime[spellID]
     if lastSuccess and (GetTime() - lastSuccess) < SUCCESS_GRACE_PERIOD then
         return
@@ -163,6 +242,8 @@ local function OnGameplayEvent(self, event, ...)
                 end
             end
         end
+    elseif event == "UI_SCALE_CHANGED" or event == "DISPLAY_SIZE_CHANGED" then
+        RefreshScreenMetrics()
     end
 end
 
@@ -177,7 +258,7 @@ end
 
 function CooldownFlash_OnCompartmentEnter(_, button)
     GameTooltip:SetOwner(button, "ANCHOR_LEFT")
-    GameTooltip:SetText(addonName)
+    GameTooltip:SetText(addonName, 1, 1, 1)
     GameTooltip:AddLine("Click to open settings.", 1, 1, 1)
     GameTooltip:Show()
 end
@@ -213,6 +294,8 @@ end
 local function OnLoad(self, event, name)
     if name ~= addonName then return end
 
+    RefreshScreenMetrics()
+
     ns.CreateFlashFrame()
     ns.SetupOptions()
     ns.SetupSlashHandler()
@@ -221,6 +304,8 @@ local function OnLoad(self, event, name)
     eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "player")
     eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
     eventFrame:RegisterEvent("UI_ERROR_MESSAGE")
+    eventFrame:RegisterEvent("UI_SCALE_CHANGED")
+    eventFrame:RegisterEvent("DISPLAY_SIZE_CHANGED")
 
     eventFrame:SetScript("OnEvent", OnGameplayEvent)
 

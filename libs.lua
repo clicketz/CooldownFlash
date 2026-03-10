@@ -64,6 +64,45 @@ function ns.Libs.CreateNumberInput(parent, label, key, updateFunc)
     return editbox
 end
 
+function ns.Libs.CreateDropdown(parent, labelText, key, options, updateFunc)
+    local container = CreateFrame("Frame", nil, parent)
+    container:SetSize(250, 25)
+
+    local label = container:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    label:SetPoint("LEFT", 0, 0)
+    label:SetText(labelText)
+
+    local dropdown = CreateFrame("DropdownButton", nil, container, "WowStyle1DropdownTemplate")
+    dropdown:SetPoint("LEFT", label, "RIGHT", 10, 0)
+    dropdown:SetWidth(100)
+
+    function container:UpdateValue()
+        dropdown:SetupMenu(function(owner, rootDescription)
+            for _, opt in ipairs(options) do
+                rootDescription:CreateRadio(
+                    opt.name,
+                    function()
+                        local val = CooldownFlashDB[key]
+                        if val == nil then val = ns.Config.Defaults[key] end
+                        return val == opt.value
+                    end,
+                    function()
+                        CooldownFlashDB[key] = opt.value
+                        if updateFunc then updateFunc(opt.value) end
+                    end
+                )
+            end
+        end)
+    end
+
+    container:SetScript("OnShow", function(self)
+        self:UpdateValue()
+    end)
+
+    table.insert(inputRegistry, container)
+    return container
+end
+
 -- Creates the Blacklist Manager Panel
 function ns.Libs.CreateBlacklistPanel(parent)
     local container = CreateFrame("Frame", nil, parent, "BackdropTemplate")
@@ -81,7 +120,6 @@ function ns.Libs.CreateBlacklistPanel(parent)
     title:SetPoint("TOP", 0, -15)
     title:SetText("Ignored Spells")
 
-    -- Add Input
     local addInput = CreateFrame("EditBox", nil, container, "InputBoxTemplate")
     addInput:SetSize(120, 20)
     addInput:SetPoint("TOPLEFT", 20, -45)
@@ -97,7 +135,6 @@ function ns.Libs.CreateBlacklistPanel(parent)
     addButton:SetPoint("LEFT", addInput, "RIGHT", 5, 0)
     addButton:SetText("Add")
 
-    -- List ScrollFrame
     local scrollFrame = CreateFrame("ScrollFrame", nil, container, "UIPanelScrollFrameTemplate")
     scrollFrame:SetPoint("TOPLEFT", 20, -80)
     scrollFrame:SetPoint("BOTTOMRIGHT", -35, 20)
