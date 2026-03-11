@@ -8,9 +8,13 @@ function ns.SetupOptions()
     title:SetPoint("TOPLEFT", 16, -16)
     title:SetText(addonName)
 
-    local subText = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
-    subText:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
-    subText:SetText("Press Enter to save changes.")
+    local author = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    author:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
+    author:SetFormattedText("|cFF50C878Author|r: %s", C_AddOns.GetAddOnMetadata(addonName, "Author"))
+
+    local version = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    version:SetPoint("TOPLEFT", author, "BOTTOMLEFT", 0, -8)
+    version:SetFormattedText("|cFF50C878Version|r: %s", C_AddOns.GetAddOnMetadata(addonName, "Version"))
 
     -- Configuration Inputs
     local sizeInput = ns.Libs.CreateNumberInput(panel, "Icon Size (px)", "iconSize", function() ns.ApplySettings() end)
