@@ -10,15 +10,15 @@ function ns.SetupOptions()
 
     local author = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     author:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
-    author:SetFormattedText("|cFF50C878Author|r: %s", C_AddOns.GetAddOnMetadata(addonName, "Author"))
+    author:SetFormattedText("|cFFFF7C0AAuthor|r: %s", C_AddOns.GetAddOnMetadata(addonName, "Author"))
 
     local version = panel:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
     version:SetPoint("TOPLEFT", author, "BOTTOMLEFT", 0, -8)
-    version:SetFormattedText("|cFF50C878Version|r: %s", C_AddOns.GetAddOnMetadata(addonName, "Version"))
+    version:SetFormattedText("|cFFFF7C0AVersion|r: %s", C_AddOns.GetAddOnMetadata(addonName, "Version"))
 
     -- Configuration Inputs
     local sizeInput = ns.Libs.CreateNumberInput(panel, "Icon Size (px)", "iconSize", function() ns.ApplySettings() end)
-    sizeInput:SetPoint("TOPLEFT", subText, "BOTTOMLEFT", 10, -30)
+    sizeInput:SetPoint("TOPLEFT", version, "BOTTOMLEFT", 10, -30)
 
     local xInput = ns.Libs.CreateNumberInput(panel, "Position X", "posX", function() ns.ApplySettings() end)
     xInput:SetPoint("TOPLEFT", sizeInput, "BOTTOMLEFT", 0, -20)
