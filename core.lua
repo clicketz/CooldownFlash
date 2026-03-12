@@ -1,24 +1,18 @@
 local addonName, ns = ...
 
--- Performance Upvalues
+-- Upvalues
 local GetTime = GetTime
-local C_Spell = C_Spell
 local GetSpellCooldown = C_Spell.GetSpellCooldown
 local GetSpellInfo = C_Spell.GetSpellInfo
 local GetCursorPosition = GetCursorPosition
 
 -- Constants
-local VALID_ERRORS = {
-    [ERR_ABILITY_COOLDOWN] = true,
-    [ERR_SPELL_COOLDOWN]   = true,
-}
-local TIME_THRESHOLD = 0.2
+local SPAM_THROTTLE = 0.1
 local SUCCESS_GRACE_PERIOD = 1.0 -- Seconds to ignore errors after a successful cast
 local BASE_SIZE = 36             -- Standard Blizzard ActionButton size
 
 -- State
-local lastFailedSpellID = nil
-local lastFailedTime = 0
+local lastFlashTime = 0
 local lastSuccessTime = {} -- [spellID] = timestamp
 
 -- Screen Metrics Cache
@@ -26,15 +20,16 @@ local cachedUIScale = 1
 local cachedScreenW = 0
 local cachedScreenH = 0
 
+-- Isolated dummy frame to safely evaluate cooldown duration
+local cooldownEvaluator = CreateFrame("Cooldown", nil, UIParent, "CooldownFrameTemplate")
+cooldownEvaluator:Hide()
+cooldownEvaluator:SetAlpha(0)
+
 local function RefreshScreenMetrics()
     cachedUIScale = UIParent:GetEffectiveScale()
     cachedScreenW = UIParent:GetWidth()
     cachedScreenH = UIParent:GetHeight()
 end
-
--- ----------------------------------------------------------------------------
--- Core Visual Logic
--- ----------------------------------------------------------------------------
 
 -- OnUpdate loop for Cursor Tracking and Boundary Checks
 local function CursorTracker_OnUpdate(self)
@@ -103,7 +98,6 @@ local function DisplayFlash(spellID, texture, startTime, duration, modRate)
     ns.frame.Icon:SetTexture(texture)
     ns.frame.Cooldown:SetCooldown(startTime, duration, modRate)
 
-    -- Hook or unhook the cursor tracker depending on settings
     if CooldownFlashDB.anchor == "Cursor" then
         ns.frame:SetScript("OnUpdate", CursorTracker_OnUpdate)
     else
@@ -115,15 +109,16 @@ local function DisplayFlash(spellID, texture, startTime, duration, modRate)
     ns.frame:Show()
     ns.frame:SetAlpha(1)
 
-    -- Restart animation
     ns.frame.ag:Stop()
     ns.frame.ag:Play()
 end
 
 function ns.CreateFlashFrame()
+    if ns.frame then return end
+
     local f = CreateFrame("Button", "CooldownFlashFrame", UIParent)
     f:Hide()
-    f:EnableMouse(false) -- Ensure it doesn't intercept clicks
+    f:EnableMouse(false)
 
     f.Icon = f:CreateTexture(nil, "BACKGROUND")
     f.Icon:SetAllPoints()
@@ -170,7 +165,6 @@ function ns.CreateFlashFrame()
 
     -- apply settings before skinning for masque
     ns.ApplySettings()
-
     ns.Skin.Register(f)
 end
 
@@ -192,7 +186,6 @@ function ns.ApplySettings()
         ns.frame:SetScript("OnUpdate", nil)
     end
 
-    -- update animations
     ns.frame.alphaAnim:SetDuration(CooldownFlashDB.fadeDuration)
     ns.frame.alphaAnim:SetStartDelay(CooldownFlashDB.fadeDelay)
 
@@ -203,53 +196,45 @@ function ns.TestFlash()
     DisplayFlash(0, 134400, GetTime(), 10, 1) -- 0 ID for test, 134400 is "Interface/Icons/QuestionMark"
 end
 
-function ns.TriggerFlash(spellID)
+local function TryFlash(spellID)
     if CooldownFlashDB.ignoredSpells and CooldownFlashDB.ignoredSpells[spellID] then return end
 
-    -- If we successfully cast this spell < 1s ago, this error is likely false (spam/lag)
+    local now = GetTime()
+    if (now - lastFlashTime) < SPAM_THROTTLE then return end
+
     local lastSuccess = lastSuccessTime[spellID]
-    if lastSuccess and (GetTime() - lastSuccess) < SUCCESS_GRACE_PERIOD then
-        return
-    end
+    if lastSuccess and (now - lastSuccess) < SUCCESS_GRACE_PERIOD then return end
 
     local cdInfo = GetSpellCooldown(spellID)
     if not cdInfo or cdInfo.isOnGCD then return end
 
-    local spellInfo = GetSpellInfo(spellID)
-    if not spellInfo then return end
+    -- use SetCooldown to evaluate if cdInfo.duration > 0 securely
+    cooldownEvaluator:SetCooldown(cdInfo.startTime, cdInfo.duration, cdInfo.modRate)
 
-    DisplayFlash(spellID, spellInfo.iconID, cdInfo.startTime, cdInfo.duration, cdInfo.modRate)
+    if cooldownEvaluator:IsShown() then
+        cooldownEvaluator:Hide()
+
+        local spellInfo = GetSpellInfo(spellID)
+        if spellInfo then
+            lastFlashTime = now
+            DisplayFlash(spellID, spellInfo.iconID, cdInfo.startTime, cdInfo.duration, cdInfo.modRate)
+        end
+    end
 end
 
--- ----------------------------------------------------------------------------
--- Event Handling
--- ----------------------------------------------------------------------------
 local function OnGameplayEvent(self, event, ...)
-    if event == "UNIT_SPELLCAST_SUCCEEDED" then
+    if event == "UNIT_SPELLCAST_FAILED" then
+        local _, _, spellID = ...
+        TryFlash(spellID)
+    elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
         local _, _, spellID = ...
         -- Store the time we successfully cast this spell
         lastSuccessTime[spellID] = GetTime()
-    elseif event == "UNIT_SPELLCAST_FAILED" then
-        local _, _, spellID = ...
-        lastFailedSpellID = spellID
-        lastFailedTime = GetTime()
-    elseif event == "UI_ERROR_MESSAGE" then
-        local _, message = ...
-        if VALID_ERRORS[message] then
-            if (GetTime() - lastFailedTime) < TIME_THRESHOLD then
-                if lastFailedSpellID then
-                    ns.TriggerFlash(lastFailedSpellID)
-                end
-            end
-        end
     elseif event == "UI_SCALE_CHANGED" or event == "DISPLAY_SIZE_CHANGED" then
         RefreshScreenMetrics()
     end
 end
 
--- ----------------------------------------------------------------------------
--- Minimap / Addon Compartment
--- ----------------------------------------------------------------------------
 function CooldownFlash_OpenOptions()
     if ns.CategoryID then
         Settings.OpenToCategory(ns.CategoryID)
@@ -267,9 +252,7 @@ function CooldownFlash_OnCompartmentLeave()
     GameTooltip:Hide()
 end
 
--- ----------------------------------------------------------------------------
 -- Slash Handler
--- ---------------------------------------------------------------------------
 function ns.SlashCommandHandler(msg)
     local command = msg:lower()
 
@@ -288,12 +271,8 @@ function ns.SetupSlashHandler()
     SlashCmdList["COOLDOWNFLASH"] = function(msg) ns.SlashCommandHandler(msg) end
 end
 
--- ----------------------------------------------------------------------------
--- Init
--- ----------------------------------------------------------------------------
-local function OnLoad(self, event, name)
-    if name ~= addonName then return end
-
+-- Initializations
+local function OnLoad(self, event)
     RefreshScreenMetrics()
 
     ns.CreateFlashFrame()
@@ -303,15 +282,14 @@ local function OnLoad(self, event, name)
     local eventFrame = CreateFrame("Frame")
     eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", "player")
     eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_SUCCEEDED", "player")
-    eventFrame:RegisterEvent("UI_ERROR_MESSAGE")
     eventFrame:RegisterEvent("UI_SCALE_CHANGED")
     eventFrame:RegisterEvent("DISPLAY_SIZE_CHANGED")
 
     eventFrame:SetScript("OnEvent", OnGameplayEvent)
 
-    self:UnregisterEvent("ADDON_LOADED")
+    self:UnregisterEvent("PLAYER_LOGIN")
 end
 
 local loader = CreateFrame("Frame")
-loader:RegisterEvent("ADDON_LOADED")
+loader:RegisterEvent("PLAYER_LOGIN")
 loader:SetScript("OnEvent", OnLoad)
