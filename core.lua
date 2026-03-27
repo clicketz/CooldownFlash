@@ -6,6 +6,7 @@ local GetSpellCooldown = C_Spell.GetSpellCooldown
 local GetSpellCooldownDuration = C_Spell.GetSpellCooldownDuration
 local GetSpellInfo = C_Spell.GetSpellInfo
 local GetCursorPosition = GetCursorPosition
+local InCombatLockdown = InCombatLockdown
 
 -- Constants
 local SPAM_THROTTLE = 0.1
@@ -233,8 +234,21 @@ local function OnGameplayEvent(self, event, ...)
     end
 end
 
+local function OpenSettings()
+    if InCombatLockdown() then
+        print("|cfffffd8fCooldownFlash|r: Settings cannot be opened while in combat.")
+        return
+    end
+
+    if Settings and Settings.OpenToCategory then
+        Settings.OpenToCategory(ns.CategoryID)
+    else
+        InterfaceOptionsFrame_OpenToCategory(addonName)
+    end
+end
+
 function CooldownFlash_OpenOptions()
-    Settings.OpenToCategory(ns.CategoryID)
+    OpenSettings()
 end
 
 function CooldownFlash_OnCompartmentEnter(_, button)
@@ -254,10 +268,8 @@ function ns.SlashCommandHandler(msg)
 
     if command == "test" then
         ns.TestFlash()
-    elseif Settings and Settings.OpenToCategory then
-        Settings.OpenToCategory(ns.CategoryID)
     else
-        InterfaceOptionsFrame_OpenToCategory(addonName)
+        OpenSettings()
     end
 end
 
