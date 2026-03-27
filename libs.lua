@@ -4,12 +4,9 @@ ns.Libs = {}
 -- Registry to track inputs so the Options Panel can refresh them on demand
 local inputRegistry = {}
 
--- Called by options.lua via category.OnRefresh
 function ns.Libs.RefreshOptions()
     for _, element in ipairs(inputRegistry) do
-        if element.UpdateValue then
-            element:UpdateValue()
-        end
+        element:UpdateValue()
     end
 end
 
@@ -23,23 +20,16 @@ function ns.Libs.CreateNumberInput(parent, label, key, updateFunc)
     labelText:SetText(label)
 
     function editbox:UpdateValue()
-        local val = CooldownFlashDB[key]
-        if val == nil then val = ns.Config.Defaults[key] end
-        if val == nil then val = 0 end
-
-        self:SetText(tostring(val))
+        self:SetText(tostring(CooldownFlashDB[key]))
         self:SetCursorPosition(0)
     end
 
-    -- Update on show (covers standard menu navigation)
     editbox:SetScript("OnShow", function(self)
         self:UpdateValue()
     end)
 
-    -- Shared logic to save the value
     local function SaveValue(self)
         local val = tonumber(self:GetText())
-        -- Only update if valid and changed
         if val and val ~= CooldownFlashDB[key] then
             CooldownFlashDB[key] = val
             if updateFunc then updateFunc(val) end
@@ -48,7 +38,6 @@ function ns.Libs.CreateNumberInput(parent, label, key, updateFunc)
         end
     end
 
-    -- enter just clears focus. Saves happen on focus lost.
     editbox:SetScript("OnEnterPressed", function(self)
         self:ClearFocus()
     end)
@@ -82,9 +71,7 @@ function ns.Libs.CreateDropdown(parent, labelText, key, options, updateFunc)
                 rootDescription:CreateRadio(
                     opt.name,
                     function()
-                        local val = CooldownFlashDB[key]
-                        if val == nil then val = ns.Config.Defaults[key] end
-                        return val == opt.value
+                        return CooldownFlashDB[key] == opt.value
                     end,
                     function()
                         CooldownFlashDB[key] = opt.value
@@ -103,7 +90,6 @@ function ns.Libs.CreateDropdown(parent, labelText, key, options, updateFunc)
     return container
 end
 
--- Creates the Blacklist Manager Panel
 function ns.Libs.CreateBlacklistPanel(parent)
     local container = CreateFrame("Frame", nil, parent, "BackdropTemplate")
     container:SetSize(300, 400)
@@ -174,7 +160,7 @@ function ns.Libs.CreateBlacklistPanel(parent)
         end
 
         local spells = {}
-        local dbSpells = CooldownFlashDB.ignoredSpells or {}
+        local dbSpells = CooldownFlashDB.ignoredSpells
 
         for id in pairs(dbSpells) do
             local info = C_Spell.GetSpellInfo(id)
@@ -194,10 +180,8 @@ function ns.Libs.CreateBlacklistPanel(parent)
             row.text:SetText(spell.name .. " |cff888888(" .. spell.id .. ")|r")
 
             row.delBtn:SetScript("OnClick", function()
-                if CooldownFlashDB.ignoredSpells then
-                    CooldownFlashDB.ignoredSpells[spell.id] = nil
-                    RefreshList()
-                end
+                CooldownFlashDB.ignoredSpells[spell.id] = nil
+                RefreshList()
             end)
 
             row:ClearAllPoints()
@@ -216,7 +200,6 @@ function ns.Libs.CreateBlacklistPanel(parent)
     local function AddSpell()
         local id = tonumber(addInput:GetText())
         if id and C_Spell.GetSpellInfo(id) then
-            if not CooldownFlashDB.ignoredSpells then CooldownFlashDB.ignoredSpells = {} end
             CooldownFlashDB.ignoredSpells[id] = true
             addInput:SetText("")
             addInput:ClearFocus()

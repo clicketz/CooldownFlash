@@ -16,7 +16,6 @@ function ns.SetupOptions()
     version:SetPoint("TOPLEFT", author, "BOTTOMLEFT", 0, -8)
     version:SetFormattedText("|cFFFF7C0AVersion|r: %s", C_AddOns.GetAddOnMetadata(addonName, "Version"))
 
-    -- Configuration Inputs
     local sizeInput = ns.Libs.CreateNumberInput(panel, "Icon Size (px)", "iconSize", function() ns.ApplySettings() end)
     sizeInput:SetPoint("TOPLEFT", version, "BOTTOMLEFT", 10, -30)
 
@@ -27,12 +26,12 @@ function ns.SetupOptions()
     yInput:SetPoint("TOPLEFT", xInput, "BOTTOMLEFT", 0, -20)
 
     local fadeInput = ns.Libs.CreateNumberInput(panel, "Fade Duration (sec)", "fadeDuration", function(val)
-        if ns.frame then ns.frame.alphaAnim:SetDuration(val) end
+        ns.frame.alphaAnim:SetDuration(val)
     end)
     fadeInput:SetPoint("TOPLEFT", yInput, "BOTTOMLEFT", 0, -20)
 
     local delayInput = ns.Libs.CreateNumberInput(panel, "Fade Start Delay (sec)", "fadeDelay", function(val)
-        if ns.frame then ns.frame.alphaAnim:SetStartDelay(val) end
+        ns.frame.alphaAnim:SetStartDelay(val)
     end)
     delayInput:SetPoint("TOPLEFT", fadeInput, "BOTTOMLEFT", 0, -20)
 
@@ -49,12 +48,10 @@ function ns.SetupOptions()
     testBtn:SetPoint("TOPLEFT", anchorInput, "BOTTOMLEFT", 5, -30)
     testBtn:SetScript("OnClick", function() ns.TestFlash() end)
 
-    -- Blacklist Panel
     local blacklistPanel = ns.Libs.CreateBlacklistPanel(panel)
     blacklistPanel:SetPoint("TOPRIGHT", -20, -20)
     blacklistPanel:SetPoint("BOTTOMRIGHT", -20, 20)
 
-    -- Slash Command Help Panel
     local helpPanel = CreateFrame("Frame", nil, panel)
     helpPanel:SetSize(100, 150)
     helpPanel:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 20, 20)
@@ -79,7 +76,6 @@ function ns.SetupOptions()
     lastHelp = AddCommand("/cooldownflash", "Alias for /cdf", lastHelp)
     lastHelp = AddCommand("/cdf test", "Trigger a test flash", lastHelp)
 
-    -- Register Category
     local category = Settings.RegisterCanvasLayoutCategory(panel, panel.name)
 
     category.OnRefresh = function()

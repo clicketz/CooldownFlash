@@ -17,12 +17,9 @@ ns.Config.Defaults = {
 function ns.Config.InitDB()
     if not CooldownFlashDB then CooldownFlashDB = {} end
 
-    -- Fill in any missing keys with defaults
     for k, v in pairs(ns.Config.Defaults) do
         if CooldownFlashDB[k] == nil then
             CooldownFlashDB[k] = v
         end
     end
 end
-
-ns.Config.InitDB()
