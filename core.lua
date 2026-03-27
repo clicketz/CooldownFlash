@@ -3,6 +3,7 @@ local addonName, ns = ...
 -- Upvalues
 local GetTime = GetTime
 local GetSpellCooldown = C_Spell.GetSpellCooldown
+local GetSpellCooldownDuration = C_Spell.GetSpellCooldownDuration
 local GetSpellInfo = C_Spell.GetSpellInfo
 local GetCursorPosition = GetCursorPosition
 
@@ -31,7 +32,6 @@ local function RefreshScreenMetrics()
     cachedScreenH = UIParent:GetHeight()
 end
 
--- OnUpdate loop for Cursor Tracking and Boundary Checks
 local function CursorTracker_OnUpdate(self)
     local cursorX, cursorY = GetCursorPosition()
 
@@ -42,7 +42,6 @@ local function CursorTracker_OnUpdate(self)
     local frameScale = self:GetScale()
     local halfSize = (BASE_SIZE * frameScale) / 2
 
-    -- grab user offsets directly (they are already in UIParent space)
     local offsetX = CooldownFlashDB.posX
     local offsetY = CooldownFlashDB.posY
 
@@ -74,7 +73,6 @@ local function CursorTracker_OnUpdate(self)
     local finalX = targetX / frameScale
     local finalY = targetY / frameScale
 
-    -- execute a position change if it physically moved
     if self._lastX ~= finalX or self._lastY ~= finalY then
         self:ClearAllPoints()
         self:SetPoint("CENTER", UIParent, "BOTTOMLEFT", finalX, finalY)
@@ -83,20 +81,19 @@ local function CursorTracker_OnUpdate(self)
     end
 end
 
--- Shared function to display the frame (used by Trigger and Test)
-local function DisplayFlash(spellID, texture, startTime, duration, modRate)
-    if not ns.frame then return end
-
-    -- If we are currently flashing THIS spell, let it play.
-    -- This prevents "stuttering" animations when spamming a key that is on CD.
+local function DisplayFlash(spellID, texture, durationObj, startTime, duration, modRate)
     if ns.frame:IsShown() and ns.frame.currentSpellID == spellID and ns.frame.ag:IsPlaying() then
         return
     end
 
     ns.frame.currentSpellID = spellID
-
     ns.frame.Icon:SetTexture(texture)
-    ns.frame.Cooldown:SetCooldown(startTime, duration, modRate)
+
+    if durationObj then
+        ns.frame.Cooldown:SetCooldownFromDurationObject(durationObj)
+    else
+        ns.frame.Cooldown:SetCooldown(startTime, duration, modRate)
+    end
 
     if CooldownFlashDB.anchor == "Cursor" then
         ns.frame:SetScript("OnUpdate", CursorTracker_OnUpdate)
@@ -114,8 +111,6 @@ local function DisplayFlash(spellID, texture, startTime, duration, modRate)
 end
 
 function ns.CreateFlashFrame()
-    if ns.frame then return end
-
     local f = CreateFrame("Button", "CooldownFlashFrame", UIParent)
     f:Hide()
     f:EnableMouse(false)
@@ -169,8 +164,6 @@ function ns.CreateFlashFrame()
 end
 
 function ns.ApplySettings()
-    if not ns.frame then return end
-
     -- lock the frame to BASE_SIZE and use scale so subregions scale properly
     local userSize = CooldownFlashDB.iconSize
     local scale = userSize / BASE_SIZE
@@ -193,11 +186,11 @@ function ns.ApplySettings()
 end
 
 function ns.TestFlash()
-    DisplayFlash(0, 134400, GetTime(), 10, 1) -- 0 ID for test, 134400 is "Interface/Icons/QuestionMark"
+    DisplayFlash(0, 134400, nil, GetTime(), 10, 1)
 end
 
 local function TryFlash(spellID)
-    if CooldownFlashDB.ignoredSpells and CooldownFlashDB.ignoredSpells[spellID] then return end
+    if CooldownFlashDB.ignoredSpells[spellID] then return end
 
     local now = GetTime()
     if (now - lastFlashTime) < SPAM_THROTTLE then return end
@@ -208,8 +201,13 @@ local function TryFlash(spellID)
     local cdInfo = GetSpellCooldown(spellID)
     if not cdInfo or cdInfo.isOnGCD then return end
 
-    -- use SetCooldown to evaluate if cdInfo.duration > 0 securely
-    cooldownEvaluator:SetCooldown(cdInfo.startTime, cdInfo.duration, cdInfo.modRate)
+    local durationObj = GetSpellCooldownDuration and GetSpellCooldownDuration(spellID)
+
+    if durationObj then
+        cooldownEvaluator:SetCooldownFromDurationObject(durationObj)
+    else
+        cooldownEvaluator:SetCooldown(cdInfo.startTime, cdInfo.duration, cdInfo.modRate)
+    end
 
     if cooldownEvaluator:IsShown() then
         cooldownEvaluator:Hide()
@@ -217,7 +215,7 @@ local function TryFlash(spellID)
         local spellInfo = GetSpellInfo(spellID)
         if spellInfo then
             lastFlashTime = now
-            DisplayFlash(spellID, spellInfo.iconID, cdInfo.startTime, cdInfo.duration, cdInfo.modRate)
+            DisplayFlash(spellID, spellInfo.iconID, durationObj, cdInfo.startTime, cdInfo.duration, cdInfo.modRate)
         end
     end
 end
@@ -236,9 +234,7 @@ local function OnGameplayEvent(self, event, ...)
 end
 
 function CooldownFlash_OpenOptions()
-    if ns.CategoryID then
-        Settings.OpenToCategory(ns.CategoryID)
-    end
+    Settings.OpenToCategory(ns.CategoryID)
 end
 
 function CooldownFlash_OnCompartmentEnter(_, button)
@@ -273,6 +269,7 @@ end
 
 -- Initializations
 local function OnLoad(self, event)
+    ns.Config.InitDB()
     RefreshScreenMetrics()
 
     ns.CreateFlashFrame()
