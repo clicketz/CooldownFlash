@@ -22,11 +22,6 @@ local cachedUIScale = 1
 local cachedScreenW = 0
 local cachedScreenH = 0
 
--- Isolated dummy frame to safely evaluate cooldown duration
-local cooldownEvaluator = CreateFrame("Cooldown", nil, UIParent, "CooldownFrameTemplate")
-cooldownEvaluator:Hide()
-cooldownEvaluator:SetAlpha(0)
-
 local function RefreshScreenMetrics()
     cachedUIScale = UIParent:GetEffectiveScale()
     cachedScreenW = UIParent:GetWidth()
@@ -202,20 +197,11 @@ local function TryFlash(spellID)
     local cdInfo = GetSpellCooldown(spellID)
     if not cdInfo or cdInfo.isOnGCD then return end
 
-    local durationObj = GetSpellCooldownDuration and GetSpellCooldownDuration(spellID)
-
-    if durationObj then
-        cooldownEvaluator:SetCooldownFromDurationObject(durationObj)
-    else
-        cooldownEvaluator:SetCooldown(cdInfo.startTime, cdInfo.duration, cdInfo.modRate)
-    end
-
-    if cooldownEvaluator:IsShown() then
-        cooldownEvaluator:Hide()
-
+    if cdInfo.isActive then
         local spellInfo = GetSpellInfo(spellID)
         if spellInfo then
             lastFlashTime = now
+            local durationObj = GetSpellCooldownDuration(spellID)
             DisplayFlash(spellID, spellInfo.iconID, durationObj, cdInfo.startTime, cdInfo.duration, cdInfo.modRate)
         end
     end
