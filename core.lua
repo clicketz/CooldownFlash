@@ -22,6 +22,9 @@ local cachedUIScale = 1
 local cachedScreenW = 0
 local cachedScreenH = 0
 
+-- Test
+local testDurationObj
+
 local function RefreshScreenMetrics()
     cachedUIScale = UIParent:GetEffectiveScale()
     cachedScreenW = UIParent:GetWidth()
@@ -77,7 +80,7 @@ local function CursorTracker_OnUpdate(self)
     end
 end
 
-local function DisplayFlash(spellID, texture, durationObj, startTime, duration, modRate)
+local function DisplayFlash(spellID, texture, durationObj)
     if ns.frame:IsShown() and ns.frame.currentSpellID == spellID and ns.frame.ag:IsPlaying() then
         return
     end
@@ -85,11 +88,7 @@ local function DisplayFlash(spellID, texture, durationObj, startTime, duration, 
     ns.frame.currentSpellID = spellID
     ns.frame.Icon:SetTexture(texture)
 
-    if durationObj then
-        ns.frame.Cooldown:SetCooldownFromDurationObject(durationObj)
-    else
-        ns.frame.Cooldown:SetCooldown(startTime, duration, modRate)
-    end
+    ns.frame.Cooldown:SetCooldownFromDurationObject(durationObj)
 
     if CooldownFlashDB.anchor == "Cursor" then
         ns.frame:SetScript("OnUpdate", CursorTracker_OnUpdate)
@@ -182,7 +181,14 @@ function ns.ApplySettings()
 end
 
 function ns.TestFlash()
-    DisplayFlash(0, 134400, nil, GetTime(), 10, 1)
+    if not testDurationObj then
+        testDurationObj = C_DurationUtil.CreateDuration()
+    end
+
+    testDurationObj:SetTimeFromStart(GetTime(), 10, 1)
+
+    -- 0 ID for test, 134400 is "Interface/Icons/QuestionMark"
+    DisplayFlash(0, 134400, testDurationObj)
 end
 
 local function TryFlash(spellID)
@@ -202,7 +208,7 @@ local function TryFlash(spellID)
         if spellInfo then
             lastFlashTime = now
             local durationObj = GetSpellCooldownDuration(spellID)
-            DisplayFlash(spellID, spellInfo.iconID, durationObj, cdInfo.startTime, cdInfo.duration, cdInfo.modRate)
+            DisplayFlash(spellID, spellInfo.iconID, durationObj)
         end
     end
 end
