@@ -181,10 +181,6 @@ function ns.ApplySettings()
 end
 
 function ns.TestFlash()
-    if not testDurationObj then
-        testDurationObj = C_DurationUtil.CreateDuration()
-    end
-
     testDurationObj:SetTimeFromStart(GetTime(), 10, 1)
 
     -- 0 ID for test, 134400 is "Interface/Icons/QuestionMark"
@@ -275,6 +271,8 @@ end
 local function OnLoad()
     ns.Config.InitDB()
     RefreshScreenMetrics()
+
+    testDurationObj = C_DurationUtil.CreateDuration()
 
     ns.CreateFlashFrame()
     ns.SetupOptions()
