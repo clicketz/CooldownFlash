@@ -272,7 +272,7 @@ function ns.SetupSlashHandler()
 end
 
 -- Initializations
-local function OnLoad(self, event)
+local function OnLoad()
     ns.Config.InitDB()
     RefreshScreenMetrics()
 
@@ -287,10 +287,6 @@ local function OnLoad(self, event)
     eventFrame:RegisterEvent("DISPLAY_SIZE_CHANGED")
 
     eventFrame:SetScript("OnEvent", OnGameplayEvent)
-
-    self:UnregisterEvent("PLAYER_LOGIN")
 end
 
-local loader = CreateFrame("Frame")
-loader:RegisterEvent("PLAYER_LOGIN")
-loader:SetScript("OnEvent", OnLoad)
+EventRegistry:RegisterFrameEventAndCallback("PLAYER_LOGIN", OnLoad)
