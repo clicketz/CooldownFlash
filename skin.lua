@@ -3,9 +3,6 @@ local addonName, ns = ...
 ns.Skin = {}
 local group = nil
 
--- ----------------------------------------------------------------------------
--- Masque Registration
--- ----------------------------------------------------------------------------
 function ns.Skin.Register(frame)
     local Masque = LibStub and LibStub("Masque", true)
     if not Masque then return end
@@ -26,9 +23,7 @@ function ns.Skin.Register(frame)
     group:ReSkin()
 end
 
--- ----------------------------------------------------------------------------
--- Trigger a re-skin (useful when resizing the frame)
--- ----------------------------------------------------------------------------
+-- force trigger a re-skin (useful when resizing the frame)
 function ns.Skin.ReSkin()
     if group then
         group:ReSkin()

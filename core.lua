@@ -11,7 +11,7 @@ local InCombatLockdown = InCombatLockdown
 -- Constants
 local SPAM_THROTTLE = 0.1
 local SUCCESS_GRACE_PERIOD = 1.0 -- Seconds to ignore errors after a successful cast
-local BASE_SIZE = 36             -- Standard Blizzard ActionButton size
+local BASE_SIZE = 36 -- Standard Blizzard ActionButton size
 
 -- State
 local lastFlashTime = 0
