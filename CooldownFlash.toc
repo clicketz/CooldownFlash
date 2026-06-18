@@ -1,4 +1,4 @@
-## Interface: 120005
+## Interface: 120007
 ## Title: |cfffffd8fCooldownFlash|r
 ## Notes: Flashes an icon in the center of the screen if a pressed ability is on cooldown.
 ## Author: clicket
