@@ -90,6 +90,31 @@ function ns.Libs.CreateDropdown(parent, labelText, key, options, updateFunc)
     return container
 end
 
+function ns.Libs.CreateCheckbox(parent, labelText, key, updateFunc)
+    local checkbox = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
+    checkbox:SetSize(20, 20)
+
+    local label = checkbox:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    label:SetPoint("LEFT", checkbox, "RIGHT", 5, 0)
+    label:SetText(labelText)
+
+    function checkbox:UpdateValue()
+        self:SetChecked(CooldownFlashDB[key])
+    end
+
+    checkbox:SetScript("OnClick", function(self)
+        CooldownFlashDB[key] = self:GetChecked()
+        if updateFunc then updateFunc(self:GetChecked()) end
+    end)
+
+    checkbox:SetScript("OnShow", function(self)
+        self:UpdateValue()
+    end)
+
+    table.insert(inputRegistry, checkbox)
+    return checkbox
+end
+
 function ns.Libs.CreateBlacklistPanel(parent)
     local container = CreateFrame("Frame", nil, parent, "BackdropTemplate")
     container:SetSize(300, 400)
