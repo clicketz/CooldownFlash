@@ -42,10 +42,19 @@ function ns.SetupOptions()
     local anchorInput = ns.Libs.CreateDropdown(panel, "Anchor To:", "anchor", anchorOptions, function() ns.ApplySettings() end)
     anchorInput:SetPoint("TOPLEFT", delayInput, "BOTTOMLEFT", -5, -20)
 
+    local debugInput = ns.Libs.CreateCheckbox(panel, "Enable Debug Logging", "debug", function(val)
+        if val then
+            ns.Libs.Print("Debug logging enabled.")
+        else
+            ns.Libs.Print("Debug logging disabled.")
+        end
+    end)
+    debugInput:SetPoint("TOPLEFT", anchorInput, "BOTTOMLEFT", 0, -30)
+
     local testBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     testBtn:SetSize(120, 25)
     testBtn:SetText("Test Flash")
-    testBtn:SetPoint("TOPLEFT", anchorInput, "BOTTOMLEFT", 5, -30)
+    testBtn:SetPoint("TOPLEFT", debugInput, "BOTTOMLEFT", 5, -30)
     testBtn:SetScript("OnClick", function() ns.TestFlash() end)
 
     local blacklistPanel = ns.Libs.CreateBlacklistPanel(panel)

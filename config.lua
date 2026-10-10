@@ -11,6 +11,7 @@ ns.Config.Defaults = {
     posY = 150,
     anchor = "CENTER",
     ignoredSpells = {}, -- [spellID] = true
+    debug = false,
 }
 
 -- Initialize the database

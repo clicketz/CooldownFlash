@@ -1,4 +1,5 @@
 local addonName, ns = ...
+local libs = ns.Libs
 
 -- Upvalues
 local GetTime = GetTime
@@ -96,6 +97,11 @@ local function DisplayFlash(spellID, texture, durationObj)
         ns.frame:SetScript("OnUpdate", nil)
         ns.frame._lastX = nil
         ns.frame._lastY = nil
+    end
+
+    if CooldownFlashDB.debug then
+        local spellName = GetSpellInfo(spellID) and GetSpellInfo(spellID).name or "Unknown Spell Name"
+        libs.Print("[DEBUG] |T" .. texture .. ":0|t " .. spellName .. " (ID: " .. spellID .. ")")
     end
 
     ns.frame:Show()
