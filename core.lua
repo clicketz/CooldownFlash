@@ -224,7 +224,7 @@ end
 
 local function OpenSettings()
     if InCombatLockdown() then
-        print("|cfffffd8fCooldownFlash|r: Settings cannot be opened while in combat.")
+        libs.Print("Settings cannot be opened while in combat.")
         return
     end
 

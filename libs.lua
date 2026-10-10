@@ -219,3 +219,7 @@ function ns.Libs.CreateBlacklistPanel(parent)
 
     return container
 end
+
+ns.Libs.Print = function(...)
+    print("|cfffffd8fCooldownFlash|r:", ...)
+end
