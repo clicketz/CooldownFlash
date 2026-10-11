@@ -49,12 +49,12 @@ function ns.SetupOptions()
             ns.Libs.Print("Debug logging disabled.")
         end
     end)
-    debugInput:SetPoint("TOPLEFT", anchorInput, "BOTTOMLEFT", 0, -30)
+    debugInput:SetPoint("TOPLEFT", anchorInput, "BOTTOMLEFT", 0, -20)
 
     local testBtn = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
     testBtn:SetSize(120, 25)
     testBtn:SetText("Test Flash")
-    testBtn:SetPoint("TOPLEFT", debugInput, "BOTTOMLEFT", 5, -30)
+    testBtn:SetPoint("TOPLEFT", debugInput, "BOTTOMLEFT", 5, -20)
     testBtn:SetScript("OnClick", function() ns.TestFlash() end)
 
     local blacklistPanel = ns.Libs.CreateBlacklistPanel(panel)
