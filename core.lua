@@ -25,6 +25,15 @@ local cachedScreenH = 0
 
 -- Test
 local testDurationObj
+local testSpellInfo = {
+    name = "Test Spell",
+    iconID = 134400, -- "Interface/Icons/QuestionMark"
+    originalIconID = 134400,
+    castTime = 0,
+    minRange = 0,
+    maxRange = 0,
+    spellID = 0,
+}
 
 local function RefreshScreenMetrics()
     cachedUIScale = UIParent:GetEffectiveScale()
@@ -81,10 +90,14 @@ local function CursorTracker_OnUpdate(self)
     end
 end
 
-local function DisplayFlash(spellID, texture, durationObj)
+local function DisplayFlash(spellInfo, durationObj)
+    local spellID = spellInfo.spellID
+
     if ns.frame:IsShown() and ns.frame.currentSpellID == spellID and ns.frame.ag:IsPlaying() then
         return
     end
+
+    local texture = spellInfo.iconID
 
     ns.frame.currentSpellID = spellID
     ns.frame.Icon:SetTexture(texture)
@@ -100,8 +113,7 @@ local function DisplayFlash(spellID, texture, durationObj)
     end
 
     if CooldownFlashDB.debug then
-        local spellName = GetSpellInfo(spellID) and GetSpellInfo(spellID).name or "Unknown Spell Name"
-        libs.Print("[DEBUG] |T" .. texture .. ":0|t " .. spellName .. " (ID: " .. spellID .. ")")
+        libs.Print("[DEBUG] |T" .. texture .. ":0|t " .. spellInfo.name .. " (ID: " .. spellID .. ")")
     end
 
     ns.frame:Show()
@@ -189,8 +201,7 @@ end
 function ns.TestFlash()
     testDurationObj:SetTimeFromStart(GetTime(), 10, 1)
 
-    -- 0 ID for test, 134400 is "Interface/Icons/QuestionMark"
-    DisplayFlash(0, 134400, testDurationObj)
+    DisplayFlash(testSpellInfo, testDurationObj)
 end
 
 local function TryFlash(spellID)
@@ -210,7 +221,7 @@ local function TryFlash(spellID)
         if spellInfo then
             lastFlashTime = now
             local durationObj = GetSpellCooldownDuration(spellID)
-            DisplayFlash(spellID, spellInfo.iconID, durationObj)
+            DisplayFlash(spellInfo, durationObj)
         end
     end
 end
